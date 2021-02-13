@@ -9,6 +9,7 @@ The main example is in the notebook `GaussianExample.ipynb` which performs all f
 3. **Resolution effects**.  This step does most of the heavy lifting in OmniFold and is the main part of the algorithm.  The procedure is iterative, with the number of iterations set by `iterations`.
 4. **Efficiency factors**.  Events that pass the particle-level event selection, but not the particle-level one.  One option for these events is to simply take the prior, which is the option `weights_pull[theta0_S==dummyval] = 1.` in the code.  Another option (which is on by default) is to set the pulled-back weights for such events to be equal to the average weight: _w = E[w(reco)|true]_.  This also uses the [neural positive reweighting](https://arxiv.org/abs/2007.11586).
 
+If you are not worried about (1), (2), or (4) and would simply like to do deconvolution, then you can see the script `GaussianExample_mimimal.ipynb` which calls the OmniFold algorithm in `omnifold.py`.  The Jupyter notebook is simply used to show the results - all that you need to do are specify a TensorFlow model and pass in the data to `omnifold.omnifold`.
 
 ### Further explanation
 
