@@ -51,4 +51,4 @@ If you use OmniFold, please cite:
 }
 ```
 
-_The software in this repository includes contributions from Adi Suresh and is based on the OmniFold paper based on the above paper._
+_The software in this repository includes contributions from Adi Suresh and is based on the OmniFold paper based on the above paper. We would also like to thank Miguel Arratia for many useful discussions and helpful feedback about the code._
