@@ -21,8 +21,8 @@ Here are some recent presentations that further explain the OmniFold approach:
 
 ### Publications
 
-- Paper for this repository [2021 ICLR simDL Workshop](https://simdl.github.io/files/12.pdf)
-- Preliminary Measurement from H1 Collaboration (first MultiFold on collider data!) [H1prelim-21-031](https://www-h1.desy.de/h1/www/publications/htmlsplit/H1prelim-21-031.long.html)
+- Paper for this repository: [2021 ICLR simDL Workshop](https://simdl.github.io/files/12.pdf)
+- Preliminary Measurement from H1 Collaboration (first MultiFold on collider data!): [H1prelim-21-031](https://www-h1.desy.de/h1/www/publications/htmlsplit/H1prelim-21-031.long.html)
 - Original Paper: [Phys. Rev. Lett. 124 (2020) 182001](https://dx.doi.org/10.1103/PhysRevLett.124.182001), [1911.09107 [hep-ph]](https://arxiv.org/abs/1911.09107)
 
 ### Name
