@@ -66,9 +66,10 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
         Y_train_1 = np.stack((Y_train_1, w_train_1), axis=1)
         Y_test_1 = np.stack((Y_test_1, w_test_1), axis=1)   
         
-        model.compile(loss='binary_crossentropy',
+        model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
                       metrics=['accuracy'])
+
         model.fit(X_train_1,
                   Y_train_1,
                   epochs=20,
@@ -95,7 +96,7 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
         Y_train_2 = np.stack((Y_train_2, w_train_2), axis=1)
         Y_test_2 = np.stack((Y_test_2, w_test_2), axis=1)   
         
-        model.compile(loss='binary_crossentropy',
+        model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
                       metrics=['accuracy'])
         model.fit(X_train_2,
