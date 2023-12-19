@@ -14,50 +14,51 @@ def reweight(events,model,batch_size=10000):
 def weighted_binary_crossentropy(y_true, y_pred):
     weights = tf.gather(y_true, [1], axis=1) # event weights
     y_true = tf.gather(y_true, [0], axis=1) # actual y_true for loss
-    
+
     # Clip the prediction value to prevent NaN's and Inf's
     epsilon = K.epsilon()
     y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
 
     t_loss = -weights * ((y_true) * K.log(y_pred) +
                          (1 - y_true) * K.log(1 - y_pred))
-    
+
     return K.mean(t_loss)
 
 def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
 
     weights = np.empty(shape=(iterations, 2, len(theta0)))
     # shape = (iteration, step, event)
-    
+
     theta0_G = theta0[:,0]
     theta0_S = theta0[:,1]
-    
+
     labels0 = np.zeros(len(theta0))
     labels_unknown = np.ones(len(theta_unknown_S))
-    
+    labels_unknown_step2 = np.ones(len(theta0_G))
+
     xvals_1 = np.concatenate((theta0_S, theta_unknown_S))
     yvals_1 = np.concatenate((labels0, labels_unknown))
 
     xvals_2 = np.concatenate((theta0_G, theta0_G))
-    yvals_2 = np.concatenate((labels0, labels_unknown))
+    yvals_2 = np.concatenate((labels0, labels_unknown_step2))
 
     # initial iterative weights are ones
     weights_pull = np.ones(len(theta0_S))
     weights_push = np.ones(len(theta0_S))
-    
+
     for i in range(iterations):
 
         if (verbose>0):
             print("\nITERATION: {}\n".format(i + 1))
             pass
-        
+
         # STEP 1: classify Sim. (which is reweighted by weights_push) to Data
         # weights reweighted Sim. --> Data
 
         if (verbose>0):
             print("STEP 1\n")
             pass
-            
+
         weights_1 = np.concatenate((weights_push, np.ones(len(theta_unknown_S))))
 
         X_train_1, X_test_1, Y_train_1, Y_test_1, w_train_1, w_test_1 = train_test_split(xvals_1, yvals_1, weights_1)
@@ -65,7 +66,7 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
         # zip ("hide") the weights with the labels
         Y_train_1 = np.stack((Y_train_1, w_train_1), axis=1)
         Y_test_1 = np.stack((Y_test_1, w_test_1), axis=1)   
-        
+
         model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
                       metrics=['accuracy'])
@@ -95,7 +96,7 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
         # zip ("hide") the weights with the labels
         Y_train_2 = np.stack((Y_train_2, w_train_2), axis=1)
         Y_test_2 = np.stack((Y_test_2, w_test_2), axis=1)   
-        
+
         model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
                       metrics=['accuracy'])
@@ -105,9 +106,9 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
                   batch_size=2000,
                   validation_data=(X_test_2, Y_test_2),
                   verbose=verbose)
-        
+
         weights_push = reweight(theta0_G,model)
         weights[i, 1:2, :] = weights_push
         pass
-        
+
     return weights
