@@ -1,3 +1,5 @@
+__version__ = "0.1.0"
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
