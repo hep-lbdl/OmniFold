@@ -3,4 +3,5 @@ include README.md
 exclude *.ipynb
 prune Benchmark
 prune img
+prune tests
 prune .github

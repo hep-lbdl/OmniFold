@@ -28,12 +28,18 @@ classifiers = [
     "Intended Audience :: Science/Research",
 ]
 
+[project.optional-dependencies]
+hdf5 = ["h5py"]
+parquet = ["pyarrow"]
+all = ["h5py", "pyarrow"]
+dev = ["pytest", "h5py", "pyarrow"]
+
 [project.urls]
 Homepage = "https://github.com/hep-lbdl/OmniFold"
 Issues = "https://github.com/hep-lbdl/OmniFold/issues"
 
 [tool.setuptools]
-py-modules = ["omnifold"]
+packages = ["omnifold"]
 
 [tool.setuptools.dynamic]
-version = {attr = "omnifold.__version__"}
+version = {attr = "omnifold._version.__version__"}
