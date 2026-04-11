@@ -1,12 +1,16 @@
+"""Core OmniFold algorithm: iterative reweighting with binary classifiers."""
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from sklearn.model_selection import train_test_split
 
-def reweight(events,model,batch_size=10000):
+
+def reweight(events, model, batch_size=10000):
     f = model.predict(events, batch_size=batch_size)
     weights = f / (1. - f)
     return np.squeeze(np.nan_to_num(weights))
+
 
 # Binary crossentropy for classifying two samples with weights
 # Weights are "hidden" by zipping in y_true (the labels)
@@ -24,7 +28,8 @@ def weighted_binary_crossentropy(y_true, y_pred):
 
     return K.mean(t_loss)
 
-def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
+
+def omnifold(theta0, theta_unknown_S, iterations, model, verbose=0):
 
     weights = np.empty(shape=(iterations, 2, len(theta0)))
     # shape = (iteration, step, event)
@@ -65,7 +70,7 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
 
         # zip ("hide") the weights with the labels
         Y_train_1 = np.stack((Y_train_1, w_train_1), axis=1)
-        Y_test_1 = np.stack((Y_test_1, w_test_1), axis=1)   
+        Y_test_1 = np.stack((Y_test_1, w_test_1), axis=1)
 
         model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
@@ -95,7 +100,7 @@ def omnifold(theta0,theta_unknown_S,iterations,model,verbose=0):
 
         # zip ("hide") the weights with the labels
         Y_train_2 = np.stack((Y_train_2, w_train_2), axis=1)
-        Y_test_2 = np.stack((Y_test_2, w_test_2), axis=1)   
+        Y_test_2 = np.stack((Y_test_2, w_test_2), axis=1)
 
         model.compile(loss=weighted_binary_crossentropy,
                       optimizer='Adam',
