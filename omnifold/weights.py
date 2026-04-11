@@ -30,8 +30,11 @@ class OmniFoldWeights:
         self._metadata = metadata or OmniFoldMetadata(
             iterations=weights.shape[0]
         )
+        # Replicas and systematics: name -> ndarray of shape (n_events,)
+        self._replicas = {}
+        self._systematics = {}
 
-    # -- Properties ------------------------------------------------------
+    # -- Properties ----------------------------------------------------------
 
     @property
     def weights(self):
@@ -51,7 +54,7 @@ class OmniFoldWeights:
     def n_events(self):
         return self._weights.shape[2]
 
-    # -- Accessors -------------------------------------------------------
+    # -- Accessors -----------------------------------------------------------
 
     def nominal(self):
         """Final-iteration push weights (the main unfolding result)."""
@@ -71,10 +74,81 @@ class OmniFoldWeights:
         step_idx = {"pull": 0, "push": 1}[step]
         return self._weights[iteration, step_idx, :]
 
-    # -- HDF5 I/O --------------------------------------------------------
+    # -- Replicas and systematics --------------------------------------------
+
+    def add_replica(self, name, weights_array):
+        """Add a statistical replica or bootstrap variation.
+
+        Parameters
+        ----------
+        name : str
+            Identifier, e.g. ``"ensemble_0"`` or ``"bootstrap_3"``.
+        weights_array : array-like, shape (n_events,)
+            Per-event weights for this replica (final-iteration push).
+        """
+        w = np.asarray(weights_array, dtype=np.float64)
+        if w.shape != (self.n_events,):
+            raise ValueError(
+                f"replica '{name}' must have shape ({self.n_events},), "
+                f"got {w.shape}"
+            )
+        self._replicas[name] = w
+
+    def add_systematic(self, name, weights_array):
+        """Add a systematic variation weight set.
+
+        Parameters
+        ----------
+        name : str
+            Identifier following ATLAS convention, e.g.
+            ``"JET_JER_up"`` or ``"JET_JER_down"``.
+        weights_array : array-like, shape (n_events,)
+            Per-event weights for this systematic variation.
+        """
+        w = np.asarray(weights_array, dtype=np.float64)
+        if w.shape != (self.n_events,):
+            raise ValueError(
+                f"systematic '{name}' must have shape ({self.n_events},), "
+                f"got {w.shape}"
+            )
+        self._systematics[name] = w
+
+    def replica(self, name):
+        """Return weights for a named replica."""
+        if name not in self._replicas:
+            raise KeyError(f"No replica named '{name}'")
+        return self._replicas[name]
+
+    def systematic(self, name):
+        """Return weights for a named systematic variation."""
+        if name not in self._systematics:
+            raise KeyError(f"No systematic named '{name}'")
+        return self._systematics[name]
+
+    def replicas(self):
+        """Iterate over ``(name, weights)`` pairs for all replicas."""
+        return iter(self._replicas.items())
+
+    def replica_names(self):
+        """List of replica names."""
+        return list(self._replicas.keys())
+
+    def systematic_names(self):
+        """List of systematic variation names."""
+        return list(self._systematics.keys())
+
+    def n_replicas(self):
+        """Number of replicas stored."""
+        return len(self._replicas)
+
+    def n_systematics(self):
+        """Number of systematic variations stored."""
+        return len(self._systematics)
+
+    # -- HDF5 I/O ------------------------------------------------------------
 
     def to_hdf5(self, path):
-        """Save weights and metadata to an HDF5 file.
+        """Save weights, replicas, systematics, and metadata to HDF5.
 
         Requires *h5py*: ``pip install omnifold[hdf5]``
         """
@@ -97,12 +171,24 @@ class OmniFoldWeights:
             # Bulk array for programmatic loading
             f.create_dataset("weights_array", data=self._weights)
 
+            # Replicas
+            if self._replicas:
+                rg = f.create_group("replicas")
+                for name, w in self._replicas.items():
+                    rg.create_dataset(name, data=w)
+
+            # Systematics
+            if self._systematics:
+                sg = f.create_group("systematics")
+                for name, w in self._systematics.items():
+                    sg.create_dataset(name, data=w)
+
             # Metadata stored as a JSON attribute
             f.attrs["metadata"] = self._metadata.to_json()
 
     @classmethod
     def from_hdf5(cls, path):
-        """Load weights and metadata from an HDF5 file."""
+        """Load weights, replicas, systematics, and metadata from HDF5."""
         try:
             import h5py
         except ImportError:
@@ -116,12 +202,22 @@ class OmniFoldWeights:
             metadata = OmniFoldMetadata.from_dict(
                 json.loads(f.attrs["metadata"])
             )
-        return cls(weights, metadata)
+            obj = cls(weights, metadata)
 
-    # -- Parquet I/O -----------------------------------------------------
+            if "replicas" in f:
+                for name, ds in f["replicas"].items():
+                    obj.add_replica(name, ds[:])
+
+            if "systematics" in f:
+                for name, ds in f["systematics"].items():
+                    obj.add_systematic(name, ds[:])
+
+        return obj
+
+    # -- Parquet I/O ---------------------------------------------------------
 
     def to_parquet(self, path):
-        """Save weights to a Parquet file with embedded metadata.
+        """Save weights, replicas, systematics to Parquet with metadata.
 
         Requires *pyarrow*: ``pip install omnifold[parquet]``
         """
@@ -140,6 +236,14 @@ class OmniFoldWeights:
             columns[f"pull_iter{i}"] = self._weights[i, 0, :]
             columns[f"push_iter{i}"] = self._weights[i, 1, :]
 
+        # Replica columns: prefix "replica__"
+        for name, w in self._replicas.items():
+            columns[f"replica__{name}"] = w
+
+        # Systematic columns: prefix "systematic__"
+        for name, w in self._systematics.items():
+            columns[f"systematic__{name}"] = w
+
         table = pa.table(columns)
         table = table.replace_schema_metadata({
             b"omnifold_metadata": self._metadata.to_json().encode(),
@@ -148,7 +252,7 @@ class OmniFoldWeights:
 
     @classmethod
     def from_parquet(cls, path):
-        """Load weights and metadata from a Parquet file."""
+        """Load weights, replicas, systematics, and metadata from Parquet."""
         try:
             import pyarrow.parquet as pq
         except ImportError:
@@ -173,12 +277,28 @@ class OmniFoldWeights:
             weights[i, 0, :] = table.column(f"pull_iter{i}").to_numpy()
             weights[i, 1, :] = table.column(f"push_iter{i}").to_numpy()
 
-        return cls(weights, metadata)
+        obj = cls(weights, metadata)
 
-    # -- Dunder ----------------------------------------------------------
+        for col in table.column_names:
+            if col.startswith("replica__"):
+                name = col[len("replica__"):]
+                obj.add_replica(name, table.column(col).to_numpy())
+            elif col.startswith("systematic__"):
+                name = col[len("systematic__"):]
+                obj.add_systematic(name, table.column(col).to_numpy())
+
+        return obj
+
+    # -- Dunder --------------------------------------------------------------
 
     def __repr__(self):
+        extras = []
+        if self._replicas:
+            extras.append(f"n_replicas={len(self._replicas)}")
+        if self._systematics:
+            extras.append(f"n_systematics={len(self._systematics)}")
+        suffix = (", " + ", ".join(extras)) if extras else ""
         return (
             f"OmniFoldWeights(iterations={self.n_iterations}, "
-            f"n_events={self.n_events})"
+            f"n_events={self.n_events}{suffix})"
         )
