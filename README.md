@@ -11,6 +11,8 @@ The main example is in the notebook `GaussianExample.ipynb` which performs all f
 
 If you are not worried about (1), (2), or (4) and would simply like to do deconvolution, then you can see the script `GaussianExample_mimimal.ipynb` which calls the OmniFold algorithm in `omnifold.py`.  The Jupyter notebook is simply used to show the results - all that you need to do are specify a TensorFlow model and pass in the data to `omnifold.omnifold`.
 
+The output of `omnifold.omnifold` has shape `(iterations, 2, events)`, where Step 2 stores the generator-level weights used for unfolded spectra. Use `omnifold.unfolded_weights(weights)` to retrieve those weights for a chosen iteration, optionally with normalization for plotting or histogram comparisons.
+
 ### Further explanation
 
 Here are some recent presentations that further explain the OmniFold approach:
