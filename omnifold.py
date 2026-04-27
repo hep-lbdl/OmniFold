@@ -8,6 +8,55 @@ def reweight(events,model,batch_size=10000):
     weights = f / (1. - f)
     return np.squeeze(np.nan_to_num(weights))
 
+def normalize_weights(weights,target_sum=None):
+    """Scale event weights to a requested total yield.
+
+    OmniFold returns per-event density-ratio weights. For plotting or comparing
+    unfolded spectra, it is often useful to preserve the nominal Monte Carlo
+    event count while changing only the event-by-event shape. By default this
+    rescales the weights so that their sum is the number of events.
+    """
+
+    weights = np.asarray(weights, dtype=float)
+    if weights.ndim != 1:
+        raise ValueError("weights must be a one-dimensional array.")
+    if not np.all(np.isfinite(weights)):
+        raise ValueError("weights must be finite.")
+    if np.any(weights < 0):
+        raise ValueError("weights must be non-negative.")
+
+    total = np.sum(weights)
+    if total <= 0:
+        raise ValueError("weights must have a positive sum.")
+
+    if target_sum is None:
+        target_sum = len(weights)
+    if not np.isfinite(target_sum) or target_sum <= 0:
+        raise ValueError("target_sum must be positive and finite.")
+
+    return weights * (target_sum / total)
+
+def unfolded_weights(weights,iteration=-1,normalize=False,target_sum=None):
+    """Return generator-level OmniFold weights for one iteration.
+
+    The array returned by `omnifold` has shape `(iterations, 2, events)`.
+    Index `0` stores Step 1 detector-level pull weights, while index `1`
+    stores Step 2 generator-level push weights. The Step 2 weights are the
+    weights to apply to generator-level simulated events for unfolded spectra.
+    """
+
+    weights = np.asarray(weights, dtype=float)
+    if weights.ndim != 3 or weights.shape[1] != 2:
+        raise ValueError("weights must have shape (iterations, 2, events).")
+
+    selected = np.array(weights[iteration, 1, :], copy=True)
+    if not np.all(np.isfinite(selected)):
+        raise ValueError("selected unfolded weights must be finite.")
+
+    if normalize:
+        return normalize_weights(selected, target_sum=target_sum)
+    return selected
+
 # Binary crossentropy for classifying two samples with weights
 # Weights are "hidden" by zipping in y_true (the labels)
 
