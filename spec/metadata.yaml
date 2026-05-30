@@ -1,0 +1,184 @@
+format_version: "0.1"
+
+dataset:
+  name: "OmniFold pseudodata example"
+  experiment: "ATLAS-like simulation"
+  description: "Example OmniFold event-level observables and reweighting outputs for pseudodata studies."
+  schema_version: "1.0"
+
+generation:
+  nominal_generator: "MG5 (nominal sample, analysis-specific setup not documented in file)"
+  alternative_generators:
+    - "Sherpa"
+  alternative_samples:
+    - "nonDY"
+
+files:
+  nominal:
+    filename: "multifold.h5"
+    path: "data/multifold.h5"
+    event_count: 418014
+  systematics:
+    - filename: "multifold_sherpa.h5"
+      path: "data/multifold_sherpa.h5"
+      event_count: 326430
+      note: "Alternative-generator variation with reduced weight families."
+    - filename: "multifold_nonDY.h5"
+      path: "data/multifold_nonDY.h5"
+      event_count: 433397
+      note: "Alternative sample with nominal-only weighting."
+
+observables:
+  - name: "pT_ll"
+    description: "Transverse momentum of dilepton system"
+    units: "GeV"
+    suggested_bins: [200, 250, 300, 350, 400, 500, 600, 800, 1200]
+    bins_note: "Preview bins based on data range. Not official publication bins."
+  - name: "pT_l1"
+    description: "Leading lepton transverse momentum"
+    units: "GeV"
+    suggested_bins: [100, 150, 200, 250, 300, 400, 600, 900]
+    bins_note: "Preview bins based on data range. Not official publication bins."
+  - name: "pT_l2"
+    description: "Subleading lepton transverse momentum"
+    units: "GeV"
+    suggested_bins: [25, 50, 75, 100, 150, 200, 300]
+    bins_note: "Preview bins based on data range. Not official publication bins."
+  - name: "eta_l1"
+    description: "Leading lepton pseudorapidity"
+    units: "1"
+  - name: "eta_l2"
+    description: "Subleading lepton pseudorapidity"
+    units: "1"
+  - name: "phi_l1"
+    description: "Leading lepton azimuth"
+    units: "rad"
+  - name: "phi_l2"
+    description: "Subleading lepton azimuth"
+    units: "rad"
+  - name: "y_ll"
+    description: "Rapidity of dilepton system"
+    units: "1"
+  - name: "pT_trackj1"
+    description: "Leading track-jet transverse momentum"
+    units: "GeV"
+  - name: "y_trackj1"
+    description: "Leading track-jet rapidity"
+    units: "1"
+  - name: "phi_trackj1"
+    description: "Leading track-jet azimuth"
+    units: "rad"
+  - name: "m_trackj1"
+    description: "Leading track-jet mass"
+    units: "GeV"
+  - name: "tau1_trackj1"
+    description: "Leading track-jet N-subjettiness tau1"
+    units: "1"
+  - name: "tau2_trackj1"
+    description: "Leading track-jet N-subjettiness tau2"
+    units: "1"
+  - name: "tau3_trackj1"
+    description: "Leading track-jet N-subjettiness tau3"
+    units: "1"
+  - name: "pT_trackj2"
+    description: "Subleading track-jet transverse momentum"
+    units: "GeV"
+  - name: "y_trackj2"
+    description: "Subleading track-jet rapidity"
+    units: "1"
+  - name: "phi_trackj2"
+    description: "Subleading track-jet azimuth"
+    units: "rad"
+  - name: "m_trackj2"
+    description: "Subleading track-jet mass"
+    units: "GeV"
+  - name: "tau1_trackj2"
+    description: "Subleading track-jet N-subjettiness tau1"
+    units: "1"
+  - name: "tau2_trackj2"
+    description: "Subleading track-jet N-subjettiness tau2"
+    units: "1"
+  - name: "tau3_trackj2"
+    description: "Subleading track-jet N-subjettiness tau3"
+    units: "1"
+  - name: "Ntracks_trackj1"
+    description: "Track multiplicity in leading track-jet"
+    units: "count"
+  - name: "Ntracks_trackj2"
+    description: "Track multiplicity in subleading track-jet"
+    units: "count"
+
+weights:
+  nominal: "weights_nominal"
+  base_mc_weight: "weight_mc"
+  bootstrap_prefix: "weights_bootstrap_mc"
+  ensemble_prefix: "weights_ensemble"
+  data_bootstrap_prefix: "weights_bootstrap_data"
+  additional_families:
+    - "weights_pileup"
+    - "weights_muEff*"
+    - "weights_muCal*"
+    - "weights_track*"
+    - "weights_theory*"
+    - "weights_topBackground"
+    - "weights_lumi"
+  notes:
+    - "Not all families exist in every file."
+    - "multifold_nonDY.h5 provides only weight_mc and weights_nominal."
+    - "Entries marked with * are prefix patterns, not literal column names."
+
+systematics:
+  expected_families:
+    - name: "ensemble"
+      pattern: "weights_ensemble_*"
+      type: "model ensemble"
+      combination: "compare each replica with the nominal weight"
+    - name: "bootstrap_mc"
+      pattern: "weights_bootstrap_mc_*"
+      type: "MC statistical bootstrap"
+      combination: "spread across replicas"
+    - name: "bootstrap_data"
+      pattern: "weights_bootstrap_data_*"
+      type: "data statistical bootstrap"
+      combination: "spread across replicas"
+
+iterations:
+  supported_steps:
+    - "step1"
+    - "step2"
+  note: "Iteration weights should be stored with explicit iteration index and step metadata when available."
+
+normalization:
+  luminosity: "not stored in file"
+  cross_section: "not stored in file"
+  event_weights_normalized: true
+  note: >
+    weight_mc is present in all files and likely encodes the MC generator
+    weight including cross-section and luminosity scaling. However, the
+    absolute normalization inputs (integrated luminosity and cross-section)
+    are not stored in-file and must be taken from the analysis configuration.
+
+event_selection:
+  description: "not documented in files"
+  inferred_phase_space: >
+    Based on observable content (pT_ll, track-jet kinematics, lepton pT/eta),
+    the selection appears consistent with a Z+jets fiducial region requiring
+    two leptons and at least one track-jet. Exact cut values are not stored.
+  phase_space:
+    lepton_pt_min: "unknown"
+    lepton_eta_max: "unknown"
+    mll_min: "unknown"
+    mll_max: "unknown"
+    min_track_jets: 1
+    note: "Exact cut values not stored in files. To be confirmed by mentors."
+
+training:
+  algorithm: "OmniFold"
+  iterations: "unknown"
+  architecture: "unknown"
+  note: "Detailed training logs and hyperparameters are not included in these files."
+
+usage_notes:
+  - "Apply event weights to observables to compute unfolded distributions."
+  - "Use nominal weight for central values and replica families for uncertainty propagation."
+  - "Systematic variations are stored in alternative files and may have reduced weight availability."
