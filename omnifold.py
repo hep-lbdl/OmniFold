@@ -4,9 +4,17 @@ import tensorflow.keras.backend as K
 from sklearn.model_selection import train_test_split
 
 def reweight(events,model,batch_size=10000):
-    f = model.predict(events, batch_size=batch_size)
+    f = np.asarray(model.predict(events, batch_size=batch_size))
+
+    # Avoid singular odds ratios when the classifier saturates at 0 or 1.
+    eps = 1e-6
+    f = np.clip(f, eps, 1. - eps)
+
     weights = f / (1. - f)
-    return np.squeeze(np.nan_to_num(weights))
+    if not np.all(np.isfinite(weights)):
+        raise ValueError("Non-finite OmniFold weights encountered after clipping classifier outputs.")
+
+    return np.squeeze(weights)
 
 # Binary crossentropy for classifying two samples with weights
 # Weights are "hidden" by zipping in y_true (the labels)
