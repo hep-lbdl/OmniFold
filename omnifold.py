@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -5,6 +7,14 @@ from sklearn.model_selection import train_test_split
 
 def reweight(events,model,batch_size=10000):
     f = model.predict(events, batch_size=batch_size)
+    n_saturated = int(np.sum((f <= 0) | (f >= 1)))
+    if n_saturated > 0:
+        warnings.warn(
+            f"reweight: clipped {n_saturated} classifier output(s) at 0 or 1 "
+            f"to avoid divergence in f/(1-f)",
+            stacklevel=2,
+        )
+    f = np.clip(f, 1e-6, 1 - 1e-6)
     weights = f / (1. - f)
     return np.squeeze(np.nan_to_num(weights))
 
